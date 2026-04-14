@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   FlatList,
   Platform,
@@ -14,17 +15,6 @@ import {
 const NAVY = "#1B3080";
 const SKY = "#5BC8EA";
 
-// ──────────────────────────────────────────────
-// 임시 로그인 유저 정보
-// TODO: 백엔드 연동 시 실제 로그인 세션/토큰으로 교체
-// ──────────────────────────────────────────────
-const CURRENT_USER = {
-  name: "김세훈",
-  studentId: "2022112345",
-  yearId: "y3",      // 로그인한 유저의 학년 방 ID
-  yearLabel: "3학년",
-  isAdmin: false,    // 관리자 여부 → 관리자 앱에서 true
-};
 
 // ──────────────────────────────────────────────
 // 전체 채팅방 목록 (관리자 앱에서 추가/삭제 예정)
@@ -101,12 +91,18 @@ const getVisibleRooms = (user) => {
 const ADMIN_TABS = ["전체", "1학년", "2학년", "3학년", "4학년"];
 
 export default function MessengerScreen({ navigation }) {
+  const { profile } = useAuth();
   const [adminTab, setAdminTab] = useState("전체");
 
-  const visibleRooms = getVisibleRooms(CURRENT_USER);
+  // 실제 로그인 유저 정보로 채팅방 필터링
+  const currentUser = {
+    yearId: profile?.yearId || "y1",
+    isAdmin: profile?.isAdmin || false,
+  };
+  const visibleRooms = getVisibleRooms(currentUser);
 
   // 관리자일 때만 탭 필터 적용
-  const displayedRooms = CURRENT_USER.isAdmin && adminTab !== "전체"
+  const displayedRooms = currentUser.isAdmin && adminTab !== "전체"
     ? visibleRooms.filter((r) => r.yearId === "notice" || r.yearLabel === adminTab)
     : visibleRooms;
 
@@ -131,7 +127,7 @@ export default function MessengerScreen({ navigation }) {
       </View>
 
       {/* 관리자 전용: 학년별 탭 필터 */}
-      {CURRENT_USER.isAdmin && (
+      {currentUser.isAdmin && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -172,7 +168,7 @@ export default function MessengerScreen({ navigation }) {
       )}
 
       {/* 일반 유저: 내 학년 안내 배너 */}
-      {!CURRENT_USER.isAdmin && (
+      {!currentUser.isAdmin && (
         <View style={styles.yearBanner}>
           <View style={[styles.yearDot, { backgroundColor: "#6366F1" }]} />
           <Text style={styles.yearBannerText}>

@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expo-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "web", "--", "--port", "8082"],
+      "port": 8082,
+      "autoPort": false
+    },
+    {
+      "name": "express-server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server/index.js"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}

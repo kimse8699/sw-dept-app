@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuth } from "../context/AuthContext";
 
 // SW 학과 로고 컬러 - 네이비 + 스카이블루 투톤
 const NAVY = "#1B3080";
@@ -16,6 +17,10 @@ const NAVY_LIGHT = "#1B308010";
 const SKY_LIGHT = "#5BC8EA18";
 
 export default function HomeScreen({ navigation }) {
+  const { profile } = useAuth();
+  const displayName = profile?.name || "사용자";
+  const displayYear = profile?.yearLabel || "";
+  const initials = displayName.slice(-2);
   const gridItems = [
     { name: "학과 일정", icon: "calendar-blank", screen: "Calendar", color: NAVY },
     { name: "게시판", icon: "comment-text-multiple", screen: "Notice", color: NAVY },
@@ -56,8 +61,8 @@ export default function HomeScreen({ navigation }) {
 
           <View style={styles.welcomeTop}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.welcomeName}>김세훈님, 안녕하세요!</Text>
-              <Text style={styles.welcomeDept}>소프트웨어융합학과 · 3학년</Text>
+              <Text style={styles.welcomeName}>{displayName}님, 안녕하세요!</Text>
+              <Text style={styles.welcomeDept}>소프트웨어융합학과 · {displayYear}</Text>
             </View>
           </View>
 

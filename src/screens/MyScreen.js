@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuth } from "../context/AuthContext";
 
 const PRIMARY = "#1B3080";
 const PRIMARY_LIGHT = "#1B308012";
@@ -41,10 +42,16 @@ const MENU_ITEMS = [
 ];
 
 export default function MyScreen({ navigation }) {
+  const { profile, logout } = useAuth();
+  const displayName = profile?.name || "사용자";
+  const studentId = profile?.studentId || "-";
+  const yearLabel = profile?.yearLabel || "";
+  const initials = displayName.slice(-2);
+
   const handleLogout = () => {
     Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
       { text: "취소", style: "cancel" },
-      { text: "로그아웃", style: "destructive", onPress: () => Alert.alert("로그아웃되었습니다") },
+      { text: "로그아웃", style: "destructive", onPress: logout },
     ]);
   };
 
@@ -62,13 +69,13 @@ export default function MyScreen({ navigation }) {
         {/* 프로필 카드 */}
         <View style={styles.profileCard}>
           <View style={[styles.avatar, { backgroundColor: PRIMARY }]}>
-            <Text style={styles.avatarText}>SH</Text>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>김세훈</Text>
-            <Text style={styles.profileSub}>소프트웨어학과 · 2022112345</Text>
+            <Text style={styles.profileName}>{displayName}</Text>
+            <Text style={styles.profileSub}>소프트웨어융합학과 · {studentId}</Text>
             <View style={[styles.gradeBadge, { backgroundColor: PRIMARY_LIGHT }]}>
-              <Text style={[styles.gradeText, { color: PRIMARY }]}>3학년 1학기</Text>
+              <Text style={[styles.gradeText, { color: PRIMARY }]}>{yearLabel} 1학기</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.editBtn}>
