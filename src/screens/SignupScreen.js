@@ -1,6 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -15,21 +13,20 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { auth, db } from "../config/firebase";
-import { toAuthEmail } from "../context/AuthContext";
+import { useAuth } from "../context/AuthContext";
 
 const NAVY = "#1B3080";
 const SKY = "#5BC8EA";
 
-// 학년 → yearId 매핑
 const YEAR_MAP = {
-  1: { yearId: "y1", label: "1학년", admissionYear: new Date().getFullYear() - 0 },
+  1: { yearId: "y1", label: "1학년" },
   2: { yearId: "y2", label: "2학년" },
   3: { yearId: "y3", label: "3학년" },
   4: { yearId: "y4", label: "4학년" },
 };
 
 export default function SignupScreen({ navigation }) {
+  const { register } = useAuth();
   const [name, setName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [year, setYear] = useState(null); // 1~4
@@ -40,41 +37,27 @@ export default function SignupScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
-    // 유효성 검사
     if (!name.trim()) return Alert.alert("입력 오류", "이름을 입력해주세요.");
     if (studentId.trim().length < 8) return Alert.alert("입력 오류", "학번을 정확히 입력해주세요. (8자리 이상)");
     if (!year) return Alert.alert("입력 오류", "학년을 선택해주세요.");
-    if (!email.trim() || !email.includes("@")) return Alert.alert("입력 오류", "올바른 이메일을 입력해주세요.");
     if (password.length < 6) return Alert.alert("입력 오류", "비밀번호는 6자 이상이어야 합니다.");
     if (password !== confirmPw) return Alert.alert("입력 오류", "비밀번호가 일치하지 않습니다.");
 
     setLoading(true);
     try {
-      // 1. Firebase Auth 계정 생성 (학번 기반 이메일)
-      const authEmail = toAuthEmail(studentId.trim());
-      const { user } = await createUserWithEmailAndPassword(auth, authEmail, password);
-
-      // 2. Firestore에 유저 프로필 저장
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
+      await register({
         name: name.trim(),
         studentId: studentId.trim(),
-        email: email.trim(),
-        year: year,
+        email: email.trim() || undefined,
+        password,
         yearId: YEAR_MAP[year].yearId,
-        yearLabel: YEAR_MAP[year].label,
-        department: "소프트웨어융합학과",
-        isAdmin: false,
-        createdAt: serverTimestamp(),
       });
-
-      // 성공 → onAuthStateChanged가 자동으로 메인 화면으로 이동
-      Alert.alert("가입 완료", `${name}님, 환영합니다!`);
+      // register() 성공 시 AuthContext가 user를 설정 → App.js에서 자동으로 메인 화면으로 이동
     } catch (error) {
       const msg =
-        error.code === "auth/email-already-in-use" ? "이미 가입된 학번입니다." :
-        error.code === "auth/weak-password" ? "비밀번호가 너무 약합니다." :
-        "회원가입 중 오류가 발생했습니다.";
+        error.response?.data?.error === "이미 사용 중인 학번입니다."
+          ? "이미 가입된 학번입니다."
+          : error.response?.data?.error || "회원가입 중 오류가 발생했습니다.";
       Alert.alert("가입 실패", msg);
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   SafeAreaView,
@@ -10,59 +11,24 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import api from "../services/api";
 
 const PRIMARY = "#1B3080";
 const PRIMARY_LIGHT = "#1B308012";
 
-const POLLS_ACTIVE = [
-  {
-    id: 1,
-    title: "소프트웨어학과 MT 감사 투표",
-    desc: "MT 행사를 위한 활동 비용 감사 투표입니다.",
-    deadline: "2026.04.13 18:00",
-    remaining: "2시간 남음",
-    options: [
-      { id: "a", text: "찬성", votes: 32 },
-      { id: "b", text: "반대", votes: 5 },
-      { id: "c", text: "기권", votes: 3 },
-    ],
-    myVote: null,
-    total: 40,
-  },
-  {
-    id: 2,
-    title: "2026 학과 행사 날짜 선정",
-    desc: "학과 체육대회 날짜를 선정하는 투표입니다.",
-    deadline: "2026.04.15 23:59",
-    remaining: "2일 남음",
-    options: [
-      { id: "a", text: "5월 10일 (토)", votes: 18 },
-      { id: "b", text: "5월 17일 (토)", votes: 25 },
-      { id: "c", text: "5월 24일 (토)", votes: 12 },
-    ],
-    myVote: null,
-    total: 55,
-  },
-];
-
-const POLLS_ENDED = [
-  {
-    id: 3,
-    title: "2025 종강파티 장소 투표",
-    desc: "종강파티 장소를 선정하는 투표입니다.",
-    deadline: "2025.12.15 18:00",
-    options: [
-      { id: "a", text: "학교 앞 고깃집", votes: 45 },
-      { id: "b", text: "홍대 맛집 거리", votes: 30 },
-      { id: "c", text: "학교 내 식당", votes: 15 },
-    ],
-    myVote: "a",
-    total: 90,
-  },
-];
+function getRemaining(deadline) {
+  if (!deadline) return null;
+  const diff = new Date(deadline) - new Date();
+  if (diff <= 0) return "마감";
+  const hours = Math.floor(diff / 1000 / 60 / 60);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}일 남음`;
+  if (hours > 0) return `${hours}시간 남음`;
+  return "곧 마감";
+}
 
 function PollCard({ poll, onVote, ended }) {
-  const maxVotes = Math.max(...poll.options.map((o) => o.votes));
+  const maxVotes = Math.max(...poll.options.map((o) => o.votes), 0);
 
   return (
     <View style={styles.card}>
@@ -73,26 +39,28 @@ function PollCard({ poll, onVote, ended }) {
           </Text>
         </View>
         <Text style={styles.deadline}>
-          <Ionicons name="time-outline" size={12} /> {ended ? poll.deadline : poll.remaining}
+          <Ionicons name="time-outline" size={12} />{" "}
+          {ended
+            ? poll.deadline ? new Date(poll.deadline).toLocaleDateString("ko-KR") : "-"
+            : getRemaining(poll.deadline)}
         </Text>
       </View>
 
       <Text style={styles.pollTitle}>{poll.title}</Text>
-      <Text style={styles.pollDesc}>{poll.desc}</Text>
+      {!!poll.desc && <Text style={styles.pollDesc}>{poll.desc}</Text>}
 
       <View style={styles.options}>
         {poll.options.map((opt) => {
           const pct = poll.total > 0 ? Math.round((opt.votes / poll.total) * 100) : 0;
           const isVoted = poll.myVote === opt.id;
-          const isWinner = ended && opt.votes === maxVotes;
+          const isWinner = ended && opt.votes === maxVotes && maxVotes > 0;
 
           return (
             <TouchableOpacity
               key={opt.id}
               style={[
                 styles.optionBtn,
-                isVoted && { borderColor: PRIMARY, borderWidth: 2 },
-                isWinner && ended && { borderColor: PRIMARY, borderWidth: 2 },
+                (isVoted || (ended && isWinner)) && { borderColor: PRIMARY, borderWidth: 2 },
               ]}
               onPress={() => !ended && !poll.myVote && onVote(poll.id, opt.id)}
               disabled={ended || !!poll.myVote}
@@ -107,13 +75,15 @@ function PollCard({ poll, onVote, ended }) {
                   </Text>
                 </View>
                 <Text style={styles.optionPct}>
-                  {poll.myVote || ended ? `${pct}% (${opt.votes}명)` : ""}
+                  {(poll.myVote || ended) ? `${pct}% (${opt.votes}명)` : ""}
                 </Text>
               </View>
-
               {(poll.myVote || ended) && (
                 <View style={styles.progressBg}>
-                  <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: isVoted || isWinner ? PRIMARY : "#e2e8f0" }]} />
+                  <View style={[
+                    styles.progressFill,
+                    { width: `${pct}%`, backgroundColor: isVoted || isWinner ? PRIMARY : "#e2e8f0" },
+                  ]} />
                 </View>
               )}
             </TouchableOpacity>
@@ -128,34 +98,55 @@ function PollCard({ poll, onVote, ended }) {
 
 export default function PollingScreen() {
   const [tab, setTab] = useState("active");
-  const [activePolls, setActivePolls] = useState(POLLS_ACTIVE);
+  const [polls, setPolls] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleVote = (pollId, optId) => {
+  useEffect(() => {
+    fetchPolls();
+  }, [tab]);
+
+  const fetchPolls = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/polls", {
+        params: { active: tab === "active" ? "true" : "false" },
+      });
+      setPolls(res.data);
+    } catch (e) {
+      console.error("투표 로딩 실패:", e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVote = (pollId, optionId) => {
     Alert.alert("투표 확인", "정말 투표하시겠습니까? 투표 후 변경할 수 없습니다.", [
       { text: "취소", style: "cancel" },
       {
         text: "투표",
-        style: "default",
-        onPress: () => {
-          setActivePolls((prev) =>
-            prev.map((p) => {
-              if (p.id !== pollId) return p;
-              return {
-                ...p,
-                myVote: optId,
-                total: p.total + 1,
-                options: p.options.map((o) =>
-                  o.id === optId ? { ...o, votes: o.votes + 1 } : o
-                ),
-              };
-            })
-          );
+        onPress: async () => {
+          try {
+            await api.post(`/polls/${pollId}/vote`, { optionId });
+            setPolls((prev) =>
+              prev.map((p) => {
+                if (p.id !== pollId) return p;
+                return {
+                  ...p,
+                  myVote: optionId,
+                  total: p.total + 1,
+                  options: p.options.map((o) =>
+                    o.id === optionId ? { ...o, votes: o.votes + 1 } : o
+                  ),
+                };
+              })
+            );
+          } catch (e) {
+            Alert.alert("오류", "투표 중 오류가 발생했습니다.");
+          }
         },
       },
     ]);
   };
-
-  const polls = tab === "active" ? activePolls : POLLS_ENDED;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -181,24 +172,30 @@ export default function PollingScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {polls.length === 0 ? (
-          <View style={styles.empty}>
-            <MaterialCommunityIcons name="clipboard-check-outline" size={52} color="#e2e8f0" />
-            <Text style={styles.emptyText}>투표가 없습니다</Text>
-          </View>
-        ) : (
-          polls.map((poll) => (
-            <PollCard
-              key={poll.id}
-              poll={poll}
-              onVote={handleVote}
-              ended={tab === "ended"}
-            />
-          ))
-        )}
-        <View style={{ height: 40 }} />
-      </ScrollView>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={PRIMARY} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {polls.length === 0 ? (
+            <View style={styles.empty}>
+              <MaterialCommunityIcons name="clipboard-check-outline" size={52} color="#e2e8f0" />
+              <Text style={styles.emptyText}>투표가 없습니다</Text>
+            </View>
+          ) : (
+            polls.map((poll) => (
+              <PollCard
+                key={poll.id}
+                poll={poll}
+                onVote={handleVote}
+                ended={tab === "ended"}
+              />
+            ))
+          )}
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -218,14 +215,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 12, gap: 8,
     borderBottomWidth: 1, borderBottomColor: "#f1f5f9",
   },
-  tabBtn: {
-    paddingHorizontal: 20, paddingVertical: 8,
-    borderRadius: 20, backgroundColor: "#f1f5f9",
-  },
+  tabBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, backgroundColor: "#f1f5f9" },
   tabBtnActive: { backgroundColor: PRIMARY },
   tabText: { fontSize: 14, fontWeight: "700", color: "#64748b" },
   tabTextActive: { color: "white" },
 
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   scroll: { padding: 16, gap: 12 },
 
   card: {
@@ -241,22 +236,15 @@ const styles = StyleSheet.create({
   pollDesc: { fontSize: 13, color: "#64748b", marginBottom: 16 },
 
   options: { gap: 10, marginBottom: 12 },
-  optionBtn: {
-    borderWidth: 1.5, borderColor: "#e2e8f0",
-    borderRadius: 14, padding: 14,
-  },
+  optionBtn: { borderWidth: 1.5, borderColor: "#e2e8f0", borderRadius: 14, padding: 14 },
   optionTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   optionLeft: { flexDirection: "row", alignItems: "center" },
   optionText: { fontSize: 15, color: "#374151", fontWeight: "600" },
   optionPct: { fontSize: 13, color: "#94a3b8" },
-  progressBg: {
-    height: 6, backgroundColor: "#f1f5f9",
-    borderRadius: 3, marginTop: 10, overflow: "hidden",
-  },
+  progressBg: { height: 6, backgroundColor: "#f1f5f9", borderRadius: 3, marginTop: 10, overflow: "hidden" },
   progressFill: { height: 6, borderRadius: 3 },
 
   totalVotes: { fontSize: 13, color: "#94a3b8", textAlign: "right" },
-
   empty: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, color: "#94a3b8" },
 });

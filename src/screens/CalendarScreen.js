@@ -14,14 +14,24 @@ const PRIMARY = "#1B3080";
 const PRIMARY_LIGHT = "#1B308012";
 
 const EVENTS = {
-  "2026-04-13": [{ id: 1, title: "조별 과제 미팅", time: "14:00", place: "중앙 도서관 스터디룸", color: PRIMARY }],
-  "2026-04-14": [{ id: 2, title: "중간고사 시작", time: "09:00", place: "각 강의실", color: "#ef4444" }],
-  "2026-04-15": [{ id: 3, title: "중간고사", time: "09:00", place: "각 강의실", color: "#ef4444" }, { id: 4, title: "수강신청 변경", time: "10:00", place: "학교 포털", color: "#3b82f6" }],
-  "2026-04-16": [{ id: 5, title: "중간고사", time: "09:00", place: "각 강의실", color: "#ef4444" }],
-  "2026-04-17": [{ id: 6, title: "중간고사", time: "09:00", place: "각 강의실", color: "#ef4444" }, { id: 7, title: "수강신청 변경 마감", time: "17:00", place: "학교 포털", color: "#3b82f6" }],
-  "2026-04-18": [{ id: 8, title: "중간고사 종료", time: "18:00", place: "각 강의실", color: "#ef4444" }],
-  "2026-04-25": [{ id: 9, title: "소프트웨어 경진대회 신청 마감", time: "18:00", place: "학과 사무실", color: "#f59e0b" }],
-  "2026-04-30": [{ id: 10, title: "프로젝트 중간 발표", time: "13:00", place: "공학관 세미나실", color: PRIMARY }],
+  "2026-06-09": [{ id: 1, title: "수강 변경 신청 시작", time: "00:00", place: "학생정보시스템", color: "#3b82f6" }],
+  "2026-06-11": [{ id: 2, title: "수강 변경 신청 마감", time: "23:59", place: "학생정보시스템", color: "#3b82f6" }],
+  "2026-06-12": [
+    { id: 3, title: "MT 날짜 투표 마감", time: "23:59", place: "앱 투표", color: "#f59e0b" },
+    { id: 4, title: "캡스톤 자료 제출 마감", time: "24:00", place: "교수님 이메일", color: PRIMARY },
+  ],
+  "2026-06-15": [{ id: 5, title: "세미나 주제 투표 마감", time: "23:59", place: "앱 투표", color: "#f59e0b" }],
+  "2026-06-16": [{ id: 6, title: "기말고사 시작", time: "09:00", place: "각 강의실", color: "#ef4444" }],
+  "2026-06-17": [{ id: 7, title: "기말고사", time: "09:00", place: "각 강의실", color: "#ef4444" }],
+  "2026-06-18": [
+    { id: 8, title: "기말고사", time: "09:00", place: "각 강의실", color: "#ef4444" },
+    { id: 9, title: "캡스톤 최종 발표", time: "14:00", place: "공학관 B101호", color: PRIMARY },
+  ],
+  "2026-06-19": [{ id: 10, title: "기말고사", time: "09:00", place: "각 강의실", color: "#ef4444" }],
+  "2026-06-20": [{ id: 11, title: "기말고사 종료", time: "18:00", place: "각 강의실", color: "#ef4444" }],
+  "2026-06-23": [{ id: 12, title: "국가장학금 2차 신청 마감", time: "18:00", place: "한국장학재단", color: "#16a34a" }],
+  "2026-07-03": [{ id: 13, title: "학과 여름 MT (1일차)", time: "09:00", place: "가평 청평", color: "#8B5CF6" }],
+  "2026-07-04": [{ id: 14, title: "학과 여름 MT (2일차)", time: "09:00", place: "가평 청평", color: "#8B5CF6" }],
 };
 
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];

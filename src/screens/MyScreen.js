@@ -19,7 +19,7 @@ const MENU_ITEMS = [
     section: "나의 활동",
     items: [
       { icon: "calendar-check-outline", iconLib: "material", label: "내 예약 현황", badge: "2", color: PRIMARY },
-      { icon: "checkbox-outline", iconLib: "ion", label: "내 투표 현황", badge: "5", color: "#3b82f6" },
+      { icon: "checkbox-outline", iconLib: "ion", label: "내 투표 현황", badge: "3", color: "#3b82f6" },
       { icon: "notifications-outline", iconLib: "ion", label: "알림 설정", color: "#f59e0b" },
     ],
   },
@@ -91,12 +91,12 @@ export default function MyScreen({ navigation }) {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: "#3b82f6" }]}>5</Text>
+            <Text style={[styles.statNum, { color: "#3b82f6" }]}>3</Text>
             <Text style={styles.statLabel}>투표 참여</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statNum, { color: "#f59e0b" }]}>12</Text>
+            <Text style={[styles.statNum, { color: "#f59e0b" }]}>6</Text>
             <Text style={styles.statLabel}>읽은 공지</Text>
           </View>
         </View>

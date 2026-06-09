@@ -15,6 +15,8 @@ import {
 const PRIMARY = "#1B3080";
 
 const BOT_RESPONSES = {
+  학과장: "학과장 교수님은 정기현 교수님 입니다.",
+  찾아뵈: "학과장 교수님 연구실은 공대 2호관 325호실에 위치해 있습니다. 방문 전에 미리 연락을 드리고 가시는 걸 추천드려요 😊",
   수강신청: "수강신청 기간은 매 학기 초에 학사포털에서 공지됩니다.\n\n📅 2026-1학기 수강신청 변경: 4월 15일 ~ 17일\n\n수강신청은 학교 포털(portal.univ.ac.kr)에서 진행할 수 있습니다.",
   졸업요건: "소프트웨어학과 졸업요건을 안내드립니다.\n\n📋 졸업 조건\n• 총 취득학점: 130학점 이상\n• 전공필수: 45학점\n• 교양필수: 15학점\n• 졸업논문/프로젝트 이수 필수\n\n자세한 내용은 학과 사무실로 문의하세요.",
   장학금: "장학금 신청 안내입니다.\n\n💰 국가장학금\n• 신청처: 한국장학재단 (www.kosaf.go.kr)\n• 신청 기간: 2차 2026.04.10 ~ 05.08\n• 대상: 소득분위 8구간 이하\n\n📌 교내장학금은 학과 사무실에서 별도 공지됩니다.",
@@ -58,6 +60,7 @@ export default function ChatbotScreen({ navigation }) {
       ? BOT_RESPONSES[keyword]
       : "죄송합니다, 해당 내용은 학과 사무실(02-XXX-XXXX)로 문의해 주세요.\n\n📌 운영시간: 평일 09:00 ~ 18:00";
 
+    const delay = Math.floor(Math.random() * 1000) + 2500;
     setTimeout(() => {
       setMessages((prev) => [
         ...prev,
@@ -68,7 +71,7 @@ export default function ChatbotScreen({ navigation }) {
           time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
-    }, 600);
+    }, delay);
   };
 
   useEffect(() => {
@@ -96,8 +99,8 @@ export default function ChatbotScreen({ navigation }) {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={90}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
       >
         {/* 메시지 목록 */}
         <FlatList

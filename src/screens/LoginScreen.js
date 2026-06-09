@@ -37,14 +37,11 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       await login(studentId.trim(), password);
-      // 성공 시 App.js의 onAuthStateChanged가 자동으로 메인 화면으로 이동
+      // 성공 시 AuthContext가 user를 설정 → App.js에서 자동으로 메인 화면으로 이동
     } catch (error) {
       const msg =
-        error.code === "auth/user-not-found" ? "등록되지 않은 학번입니다." :
-        error.code === "auth/wrong-password" ? "비밀번호가 올바르지 않습니다." :
-        error.code === "auth/invalid-credential" ? "학번 또는 비밀번호를 확인해주세요." :
-        error.code === "auth/too-many-requests" ? "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요." :
-        "로그인 중 오류가 발생했습니다.";
+        error.response?.data?.error ||
+        "로그인 중 오류가 발생했습니다. 서버 연결을 확인해주세요.";
       Alert.alert("로그인 실패", msg);
     } finally {
       setLoading(false);

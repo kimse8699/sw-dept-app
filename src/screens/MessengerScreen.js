@@ -15,20 +15,16 @@ import {
 const NAVY = "#1B3080";
 const SKY = "#5BC8EA";
 
-
-// ──────────────────────────────────────────────
-// 전체 채팅방 목록 (관리자 앱에서 추가/삭제 예정)
-// ──────────────────────────────────────────────
 const ALL_ROOMS = [
   {
     id: "notice",
     name: "📢 학과 공지방",
-    lastMsg: "중간고사 기간 강의실 개방 안내입니다.",
-    time: "오전 10:23",
+    lastMsg: "기말고사 기간 강의실 개방 안내입니다.",
+    time: "오전 9:15",
     unread: 3,
     icon: "megaphone-outline",
     color: NAVY,
-    yearId: "notice",   // 모든 유저에게 항상 표시
+    yearId: "notice",
     yearLabel: "전체 공지",
   },
   {
@@ -56,9 +52,9 @@ const ALL_ROOMS = [
   {
     id: "y3",
     name: "23학번 (3학년)",
-    lastMsg: "캡스톤 주제 정했나요?",
-    time: "어제",
-    unread: 0,
+    lastMsg: "캡스톤 발표 준비 다들 어떻게 하고 있어요?",
+    time: "오전 10:02",
+    unread: 7,
     icon: "people-outline",
     color: "#6366F1",
     yearId: "y3",
@@ -77,31 +73,25 @@ const ALL_ROOMS = [
   },
 ];
 
-// 유저 권한에 따라 보여줄 채팅방 필터링
-// - 관리자: 전체 표시
-// - 일반 유저: 학과 공지방 + 자기 학년 방만
+const ADMIN_TABS = ["전체", "1학년", "2학년", "3학년", "4학년"];
+
 const getVisibleRooms = (user) => {
-  if (user.isAdmin) return ALL_ROOMS;
+  if (user?.isAdmin) return ALL_ROOMS;
   return ALL_ROOMS.filter(
-    (r) => r.yearId === "notice" || r.yearId === user.yearId
+    (r) => r.yearId === "notice" || r.yearId === user?.yearId
   );
 };
-
-// 관리자 전용 탭 필터 (일반 유저는 탭 불필요 - 방이 2개뿐)
-const ADMIN_TABS = ["전체", "1학년", "2학년", "3학년", "4학년"];
 
 export default function MessengerScreen({ navigation }) {
   const { profile } = useAuth();
   const [adminTab, setAdminTab] = useState("전체");
 
-  // 실제 로그인 유저 정보로 채팅방 필터링
   const currentUser = {
     yearId: profile?.yearId || "y1",
     isAdmin: profile?.isAdmin || false,
   };
   const visibleRooms = getVisibleRooms(currentUser);
 
-  // 관리자일 때만 탭 필터 적용
   const displayedRooms = currentUser.isAdmin && adminTab !== "전체"
     ? visibleRooms.filter((r) => r.yearId === "notice" || r.yearLabel === adminTab)
     : visibleRooms;
@@ -118,8 +108,7 @@ export default function MessengerScreen({ navigation }) {
             <Text style={styles.headerSub}>읽지 않은 메시지 {totalUnread}개</Text>
           )}
         </View>
-        {/* 관리자 뱃지 */}
-        {CURRENT_USER.isAdmin && (
+        {currentUser.isAdmin && (
           <View style={styles.adminBadge}>
             <Text style={styles.adminBadgeText}>관리자</Text>
           </View>
@@ -172,7 +161,7 @@ export default function MessengerScreen({ navigation }) {
         <View style={styles.yearBanner}>
           <View style={[styles.yearDot, { backgroundColor: "#6366F1" }]} />
           <Text style={styles.yearBannerText}>
-            {CURRENT_USER.yearLabel} ({CURRENT_USER.studentId.slice(0, 4)}학번) 학우방에 참여 중
+            {profile?.yearLabel || ""} ({(profile?.studentId || "").slice(0, 4)}학번) 학우방에 참여 중
           </Text>
         </View>
       )}
@@ -188,12 +177,10 @@ export default function MessengerScreen({ navigation }) {
             style={styles.roomItem}
             onPress={() => navigation.navigate("ChatRoom", { room: item })}
           >
-            {/* 아바타 */}
             <View style={[styles.avatar, { backgroundColor: item.color + "20" }]}>
               <Ionicons name={item.icon} size={24} color={item.color} />
             </View>
 
-            {/* 내용 */}
             <View style={styles.roomInfo}>
               <View style={styles.roomTop}>
                 <View style={styles.roomNameWrap}>
@@ -249,7 +236,6 @@ const styles = StyleSheet.create({
   },
   adminBadgeText: { fontSize: 12, fontWeight: "700", color: "white" },
 
-  // 관리자 탭
   tabScroll: { maxHeight: 52, backgroundColor: "white" },
   tabContent: {
     paddingHorizontal: 16, paddingVertical: 10,
@@ -269,7 +255,6 @@ const styles = StyleSheet.create({
   },
   tabBadgeText: { fontSize: 10, fontWeight: "800" },
 
-  // 일반 유저 학년 배너
   yearBanner: {
     flexDirection: "row",
     alignItems: "center",

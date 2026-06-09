@@ -1,60 +1,66 @@
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useState } from "react";
-import { auth, db } from "../config/firebase";
+import api from "../services/api";
 
 const AuthContext = createContext(null);
 
-// 학번 → Firebase Auth 이메일 변환
-// 예: "2022112345" → "2022112345@swdept.kr"
-export const toAuthEmail = (studentId) => `${studentId}@swdept.kr`;
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);       // Firebase Auth 유저
-  const [profile, setProfile] = useState(null); // Firestore 유저 프로필 (이름, 학번, 학년 등)
-  const [loading, setLoading] = useState(true); // 앱 시작 시 로그인 상태 확인 중
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // ── Firebase Auth 상태 변화 감지 (앱 시작 / 로그인 / 로그아웃)
+  // ── 앱 시작 시 저장된 토큰으로 자동 로그인
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        // Firestore에서 유저 프로필 불러오기
-        const docRef = doc(db, "users", firebaseUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProfile(docSnap.data());
+    const restoreSession = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          const res = await api.get("/users/me");
+          setUser(res.data);
+          setProfile(res.data);
         }
-      } else {
-        setUser(null);
-        setProfile(null);
+      } catch {
+        await AsyncStorage.removeItem("token");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
-    return unsubscribe;
+    };
+    restoreSession();
   }, []);
 
   // ── 로그인
   const login = async (studentId, password) => {
-    const email = toAuthEmail(studentId);
-    return signInWithEmailAndPassword(auth, email, password);
+    const res = await api.post("/auth/login", { studentId, password });
+    await AsyncStorage.setItem("token", res.data.token);
+    setUser(res.data.user);
+    setProfile(res.data.user);
+  };
+
+  // ── 회원가입
+  const register = async (data) => {
+    const res = await api.post("/auth/register", data);
+    await AsyncStorage.setItem("token", res.data.token);
+    setUser(res.data.user);
+    setProfile(res.data.user);
   };
 
   // ── 로그아웃
   const logout = async () => {
-    await signOut(auth);
+    await AsyncStorage.removeItem("token");
+    setUser(null);
+    setProfile(null);
   };
 
-  // ── 프로필 새로고침 (회원가입 후 등에 사용)
+  // ── 프로필 새로고침
   const refreshProfile = async () => {
-    if (!user) return;
-    const docRef = doc(db, "users", user.uid);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) setProfile(docSnap.data());
+    try {
+      const res = await api.get("/users/me");
+      setProfile(res.data);
+    } catch {}
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, login, register, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -24,7 +24,6 @@ import ReservationScreen from "./src/screens/ReservationScreen";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-// ── 하단 탭 네비게이터
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -58,7 +57,6 @@ function MainTabs() {
   );
 }
 
-// ── 로그인된 사용자용 스택
 function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
@@ -72,7 +70,6 @@ function AppStack() {
   );
 }
 
-// ── 비로그인 사용자용 스택
 function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -86,11 +83,9 @@ function AuthStack() {
   );
 }
 
-// ── 로그인 상태에 따라 분기
 function RootNavigator() {
   const { user, loading } = useAuth();
 
-  // Firebase 인증 상태 확인 중 → 스플래시 로딩
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#1B3080" }}>
