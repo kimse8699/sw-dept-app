@@ -12,7 +12,18 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git commit:*)",
+      "Bash(ipconfig)",
+      "Bash(node index.js)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill /PID 22928 /F)",
+      "Bash(cmd /c \"taskkill /PID 22928 /F\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d \"{\\\\\"studentId\\\\\":\\\\\"00000000\\\\\",\\\\\"password\\\\\":\\\\\"admin123\\\\\"}\")",
+      "Bash(cmd /c \"ipconfig\")",
+      "Bash(powershell -Command \"Get-NetIPAddress -AddressFamily IPv4 | Select-Object IPAddress, InterfaceAlias\")",
+      "Bash(ngrok version:*)"
     ]
   }
 }

@@ -1,17 +1,32 @@
 const express = require("express");
 const router = express.Router();
-const { db } = require("../config/firebase");
+const { Notice } = require("../models");
 const { verifyToken, verifyAdmin } = require("../middleware/auth");
-const { FieldValue } = require("firebase-admin/firestore");
+const { Op } = require("sequelize");
 
 // GET /api/notices - 공지 목록 (전체 유저)
 router.get("/", verifyToken, async (req, res) => {
   try {
-    const { type } = req.query; // 필터: 필독 | 학사 | 장학 | 일반
-    let query = db.collection("notices").orderBy("createdAt", "desc");
-    if (type) query = query.where("type", "==", type);
-    const snapshot = await query.limit(50).get();
-    res.json(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+    const { type } = req.query;
+    const where = type ? { type } : {};
+    const notices = await Notice.findAll({
+      where,
+      order: [["createdAt", "DESC"]],
+      limit: 50,
+    });
+    res.json(notices);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/notices/:id - 공지 상세 조회
+router.get("/:id", verifyToken, async (req, res) => {
+  try {
+    const notice = await Notice.findByPk(req.params.id);
+    if (!notice) return res.status(404).json({ error: "공지를 찾을 수 없습니다." });
+    await notice.increment("views");
+    res.json(notice);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -24,14 +39,14 @@ router.post("/", verifyToken, verifyAdmin, async (req, res) => {
     return res.status(400).json({ error: "title, content, type 필수입니다." });
   }
   try {
-    const ref = await db.collection("notices").add({
-      title, content, type,
-      createdBy: req.user.uid,
+    const notice = await Notice.create({
+      title,
+      content,
+      type,
+      createdById: req.user.id,
       createdByName: req.userProfile.name,
-      createdAt: FieldValue.serverTimestamp(),
-      views: 0,
     });
-    res.status(201).json({ id: ref.id });
+    res.status(201).json(notice);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -41,12 +56,12 @@ router.post("/", verifyToken, verifyAdmin, async (req, res) => {
 router.patch("/:id", verifyToken, verifyAdmin, async (req, res) => {
   const { title, content, type } = req.body;
   try {
-    await db.collection("notices").doc(req.params.id).update({
-      ...(title && { title }),
-      ...(content && { content }),
-      ...(type && { type }),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    const notice = await Notice.findByPk(req.params.id);
+    if (!notice) return res.status(404).json({ error: "공지를 찾을 수 없습니다." });
+    if (title) notice.title = title;
+    if (content) notice.content = content;
+    if (type) notice.type = type;
+    await notice.save();
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -56,7 +71,9 @@ router.patch("/:id", verifyToken, verifyAdmin, async (req, res) => {
 // DELETE /api/notices/:id - 공지 삭제 (관리자 전용)
 router.delete("/:id", verifyToken, verifyAdmin, async (req, res) => {
   try {
-    await db.collection("notices").doc(req.params.id).delete();
+    const notice = await Notice.findByPk(req.params.id);
+    if (!notice) return res.status(404).json({ error: "공지를 찾을 수 없습니다." });
+    await notice.destroy();
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });

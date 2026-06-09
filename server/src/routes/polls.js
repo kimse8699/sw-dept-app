@@ -1,24 +1,35 @@
 const express = require("express");
 const router = express.Router();
-const { db } = require("../config/firebase");
+const { Poll, PollOption, PollVote } = require("../models");
 const { verifyToken, verifyAdmin } = require("../middleware/auth");
-const { FieldValue } = require("firebase-admin/firestore");
+const sequelize = require("../config/database");
 
 // GET /api/polls - 투표 목록
 router.get("/", verifyToken, async (req, res) => {
   try {
     const { active } = req.query;
-    let query = db.collection("polls").orderBy("createdAt", "desc");
-    if (active !== undefined) query = query.where("isActive", "==", active === "true");
-    const snapshot = await query.get();
+    const where = active !== undefined ? { isActive: active === "true" } : {};
+
+    const polls = await Poll.findAll({
+      where,
+      include: [{ model: PollOption, as: "options" }],
+      order: [["createdAt", "DESC"]],
+    });
 
     // 내 투표 여부 포함
-    const polls = await Promise.all(snapshot.docs.map(async (d) => {
-      const voteDoc = await db.collection("polls").doc(d.id)
-        .collection("votes").doc(req.user.uid).get();
-      return { id: d.id, ...d.data(), myVote: voteDoc.exists ? voteDoc.data().optionId : null };
-    }));
-    res.json(polls);
+    const userId = req.user.id;
+    const result = await Promise.all(
+      polls.map(async (poll) => {
+        const myVote = await PollVote.findOne({
+          where: { pollId: poll.id, userId },
+        });
+        return {
+          ...poll.toJSON(),
+          myVote: myVote ? myVote.optionId : null,
+        };
+      })
+    );
+    res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -29,22 +40,36 @@ router.post("/:id/vote", verifyToken, async (req, res) => {
   const { optionId } = req.body;
   if (!optionId) return res.status(400).json({ error: "optionId 필수입니다." });
 
-  const pollRef = db.collection("polls").doc(req.params.id);
-  const voteRef = pollRef.collection("votes").doc(req.user.uid);
-
+  const t = await sequelize.transaction();
   try {
-    const voteDoc = await voteRef.get();
-    if (voteDoc.exists) return res.status(409).json({ error: "이미 투표했습니다." });
-
-    await db.runTransaction(async (tx) => {
-      tx.set(voteRef, { optionId, votedAt: FieldValue.serverTimestamp() });
-      tx.update(pollRef, {
-        [`options.${optionId}.votes`]: FieldValue.increment(1),
-        total: FieldValue.increment(1),
-      });
+    const existing = await PollVote.findOne({
+      where: { pollId: req.params.id, userId: req.user.id },
+      transaction: t,
     });
+    if (existing) {
+      await t.rollback();
+      return res.status(409).json({ error: "이미 투표했습니다." });
+    }
+
+    await PollVote.create(
+      { pollId: req.params.id, userId: req.user.id, optionId },
+      { transaction: t }
+    );
+    await PollOption.increment("votes", {
+      by: 1,
+      where: { id: optionId },
+      transaction: t,
+    });
+    await Poll.increment("total", {
+      by: 1,
+      where: { id: req.params.id },
+      transaction: t,
+    });
+
+    await t.commit();
     res.json({ success: true });
   } catch (e) {
+    await t.rollback();
     res.status(500).json({ error: e.message });
   }
 });
@@ -52,25 +77,29 @@ router.post("/:id/vote", verifyToken, async (req, res) => {
 // POST /api/polls - 투표 생성 (관리자 전용)
 router.post("/", verifyToken, verifyAdmin, async (req, res) => {
   const { title, desc, options, deadline } = req.body;
-  if (!title || !options?.length) return res.status(400).json({ error: "title, options 필수입니다." });
+  if (!title || !options?.length) {
+    return res.status(400).json({ error: "title, options 필수입니다." });
+  }
 
+  const t = await sequelize.transaction();
   try {
-    const optionMap = {};
-    options.forEach((opt, i) => {
-      optionMap[`opt_${i}`] = { text: opt, votes: 0 };
-    });
-
-    const ref = await db.collection("polls").add({
-      title, desc: desc || "",
-      options: optionMap,
-      total: 0,
-      isActive: true,
-      deadline: deadline ? new Date(deadline) : null,
-      createdBy: req.user.uid,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-    res.status(201).json({ id: ref.id });
+    const poll = await Poll.create(
+      {
+        title,
+        desc: desc || "",
+        deadline: deadline ? new Date(deadline) : null,
+        createdById: req.user.id,
+      },
+      { transaction: t }
+    );
+    await PollOption.bulkCreate(
+      options.map((text) => ({ pollId: poll.id, text })),
+      { transaction: t }
+    );
+    await t.commit();
+    res.status(201).json({ id: poll.id });
   } catch (e) {
+    await t.rollback();
     res.status(500).json({ error: e.message });
   }
 });
@@ -78,7 +107,10 @@ router.post("/", verifyToken, verifyAdmin, async (req, res) => {
 // PATCH /api/polls/:id/close - 투표 마감 (관리자 전용)
 router.patch("/:id/close", verifyToken, verifyAdmin, async (req, res) => {
   try {
-    await db.collection("polls").doc(req.params.id).update({ isActive: false });
+    const poll = await Poll.findByPk(req.params.id);
+    if (!poll) return res.status(404).json({ error: "투표를 찾을 수 없습니다." });
+    poll.isActive = false;
+    await poll.save();
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
